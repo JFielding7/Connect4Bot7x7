@@ -1,20 +1,30 @@
+#include <ctime>
 #include <malloc.h>
-#include <bits/types/clock_t.h>
-#include <time.h>
+#include <iostream>
+#include <unordered_map>
 #include "engine.h"
 
+using namespace std;
+
 int main() {
-    char* board =   "       \n"
-                    "       \n"
-                    "       \n"
-                    "       \n"
-                    "   O   \n"
-                    "   XX  \n"
-                    "   XO  \0";
-//    1000000011000000010000000000000010000000100000001
-//                            1000000000000000000000000
+//    unordered_map<grid, int> map;
+//    for (grid i = 0; i < 3; i++) {
+//        map[i] = (int) (i * 2 + 1 - 36);
+//    }
+//    cout << map.count(3);
+//    for (auto pair : map) {
+//        cout << pair.first << "\n";
+//    }
+//    return 0;
+    const char* board = "   X   \n"
+                        "   O   \n"
+                        "   X   \n"
+                        "   O   \n"
+                        "   X   \n"
+                        "   O   \n"
+                        "   X   \0";
     state* game_state = encode(board);
-    printf("%d\n", game_state->moves_made);
+    cout << "Depth: " << game_state->moves_made << "\n";
 
     grid height_map = game_state->height_map;
     int moves_made = game_state->moves_made;
@@ -27,20 +37,20 @@ int main() {
 
     long alpha = WORST_EVAL;
     long beta = BEST_EVAl;
-    grid* cache = (grid *) malloc(SIZE * sizeof(grid));
+    grid* end_game_cache = (grid *) malloc(SIZE * sizeof(grid));
     for (int i = 0; i < SIZE; i++) {
-        cache[i] = 0;
+        end_game_cache[i] = 0;
     }
+    unordered_map<grid, char> beginning_game_cache;
+
     unsigned long pos = 0;
-
     clock_t begin = clock();
-
-    long eval = evaluate_position(curr_pieces, opp_pieces, height_map, moves_made, alpha, beta, cache, &pos);
-
+    long eval = evaluate_position(curr_pieces, opp_pieces, height_map, moves_made, alpha, beta, beginning_game_cache, end_game_cache, &pos);
     clock_t end = clock();
 
-    printf("Eval: %ld\n", eval);
-    printf("Pos: %lu\n", pos);
-    printf("Time: %lf\n", (double) (end - begin) / CLOCKS_PER_SEC);
+    cout << "Eval: " << eval << "\n";
+    cout << "Pos: " << pos << "\n";
+    cout << "Time: " << (double) (end - begin) / CLOCKS_PER_SEC << "\n";
+    cout << "End game cache size: " << beginning_game_cache.size() << "\n";
     return 0;
 }

@@ -5,6 +5,12 @@
 #ifndef CONNECT4BOT7X7_ENGINE_H
 #define CONNECT4BOT7X7_ENGINE_H
 
+#include <unordered_map>
+
+using namespace std;
+
+#define i8 signed char
+#define BEGINNING_GAME_DEPTH 18
 #define SIZE ((1ul << 19) + 1)
 #define MAX_TOTAL_MOVES 49
 #define BEST_EVAl 22
@@ -32,10 +38,10 @@ typedef struct state_s {
     int moves_made;
 } state;
 
-state* encode(char* board);
+state* encode(const char* board);
 
 char* decode(grid curr_pieces, grid opp_pieces);
 
-long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int moves_made, long alpha, long beta, grid* cache, unsigned long* pos);
+long evaluate_position(grid, grid, grid, int, long, long, unordered_map<grid, char>&, grid*, unsigned long*);
 
 #endif //CONNECT4BOT7X7_ENGINE_H

@@ -2,10 +2,9 @@
 // Created by joe on 6/6/24.
 //
 
-#include <stdio.h>
 #include <malloc.h>
-#include <stdbool.h>
 #include "engine.h"
+
 
 static long max(long arg0, long arg1) {
     return arg0 > arg1 ? arg0 : arg1;
@@ -67,7 +66,7 @@ static void update_alpha_beta_window(long* alpha, long* beta, grid entry) {
     }
 }
 
-long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int moves_made, long alpha, long beta, grid* cache, unsigned long* pos) {
+long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int moves_made, long alpha, long beta, unordered_map<grid, char>& beginning_game_cache, grid* end_game_cache, unsigned long* pos) {
     (*pos)++;
 
     if (moves_made == MAX_TOTAL_MOVES) return DRAW;
@@ -76,11 +75,19 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
 
     grid state = curr_pieces | height_map;
     size_t index = state % SIZE;
-    grid cache_entry = cache[index];
 
-    if ((cache_entry & BOARD_MASK) == state) {
-        update_alpha_beta_window(&alpha, &beta, cache_entry);
+    if (moves_made > BEGINNING_GAME_DEPTH) {
+        grid cache_entry = end_game_cache[index];
+        if ((cache_entry & BOARD_MASK) == state) update_alpha_beta_window(&alpha, &beta, cache_entry);
     }
+    else {
+        if(beginning_game_cache.count(state)) {
+            char value = beginning_game_cache.at(state);
+            if (value & 1) beta = min(beta, (long) (value >> 1) - MAX_PLAYER_MOVES);
+            else alpha = max(alpha, (long) (value >> 1) - MAX_PLAYER_MOVES);
+        }
+    }
+
     if (alpha >= beta) return alpha;
 
     int threats = 0;
@@ -102,19 +109,26 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
             }
 
             grid updated_height_map = height_map + move;
-
             grid next_state = opp_pieces | updated_height_map;
-            size_t move_index = next_state % SIZE;
-            grid entry = cache[move_index];
-            if (((entry & BOARD_MASK) == next_state) && (entry & IS_UPPER_BOUND)) alpha = max(alpha, -((long) (entry >> BOUND_SHIFT) - MAX_PLAYER_MOVES));
-            if (alpha >= beta) return alpha;
 
+            if (moves_made < BEGINNING_GAME_DEPTH) {
+                if(beginning_game_cache.count(next_state)) {
+                    char value = beginning_game_cache.at(next_state);
+                    if (value & 1) beta = min(beta, -((long) (value >> 1) - MAX_PLAYER_MOVES));
+                }
+            }
+            else {
+                grid entry = end_game_cache[next_state % SIZE];
+                if (((entry & BOARD_MASK) == next_state) && (entry & IS_UPPER_BOUND)) alpha = max(alpha, -((long) (entry >> BOUND_SHIFT) - MAX_PLAYER_MOVES));
+            }
+
+            if (alpha >= beta) return alpha;
             threats += count_threats(updated_pieces, updated_height_map) << (col << 2);
         }
     }
 
     if (forced_move_count > 1) return -(MAX_PLAYER_MOVES - ((moves_made >> 1) + 1));
-    else if (forced_move_count) return -evaluate_position(opp_pieces, curr_pieces | forced_move, height_map + forced_move, moves_made + 1, -beta, -alpha, cache, pos);
+    else if (forced_move_count) return -evaluate_position(opp_pieces, curr_pieces | forced_move, height_map + forced_move, moves_made + 1, -beta, -alpha, beginning_game_cache, end_game_cache, pos);
 
     int order = sort_by_threats(threats);
     int moves_searched = 0;
@@ -125,10 +139,10 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
             grid updated_pieces = curr_pieces | move;
             grid updated_height_map = height_map + move;
             long eval;
-            if (moves_searched++ == 0) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -beta, -alpha, cache, pos);
+            if (moves_searched++ == 0) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -beta, -alpha, beginning_game_cache, end_game_cache, pos);
             else {
-                eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -alpha - 1, -alpha, cache, pos);
-                if (eval > alpha && eval < beta) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -beta, -alpha, cache, pos);
+                eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -alpha - 1, -alpha, beginning_game_cache, end_game_cache, pos);
+                if (eval > alpha && eval < beta) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -beta, -alpha, beginning_game_cache, end_game_cache, pos);
             }
             if (moves_made == 5) {
                 puts(decode(updated_pieces, opp_pieces));
@@ -137,17 +151,19 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
             }
             alpha = max(alpha, eval);
             if (alpha >= beta) {
-                cache[index] = state | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
+                if (moves_made > BEGINNING_GAME_DEPTH) end_game_cache[index] = state | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
+                else beginning_game_cache[state] = (char) ((alpha + MAX_PLAYER_MOVES) << 1);
                 return alpha;
             }
         }
     }
-    cache[index] = state | IS_UPPER_BOUND | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
+    if (moves_made > BEGINNING_GAME_DEPTH) end_game_cache[index] = state | IS_UPPER_BOUND | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
+    else beginning_game_cache[state] = (char) (1 | ((alpha + MAX_PLAYER_MOVES) << 1));
     return alpha;
 }
 
-state* encode(char* board) {
-    state* game_state = (state*) malloc(sizeof (state));
+state* encode(const char* board) {
+    auto* game_state = (state*) malloc(sizeof (state));
     game_state->curr_pieces = game_state->opp_pieces = game_state->height_map = game_state->moves_made = 0;
     for (int c = 0; c < COLS; c++) {
         location cell = 1lu << (c * (ROWS + 1));
