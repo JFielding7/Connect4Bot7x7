@@ -13,8 +13,8 @@ using namespace std;
 #define BEGINNING_GAME_DEPTH 18
 #define SIZE ((1ul << 19) + 1)
 #define MAX_TOTAL_MOVES 49
-#define BEST_EVAl 22
-#define WORST_EVAL -BEST_EVAl
+#define BEST_EVAL 22
+#define WORST_EVAL (-BEST_EVAL)
 #define DRAW 0
 #define MOVE_ORDER (unsigned long) (3lu + (2 << 4) + (4 << 8) + (5 << 12) + (1 << 16) + (6 << 20))
 #define MOVE_ORDER_BIT_LENGTH 28
@@ -22,6 +22,8 @@ using namespace std;
 #define START_HEIGHTS 0b00000001000000010000000100000001000000010000000100000001lu
 #define ROWS 7
 #define COLS 7
+#define COL_BITS 8
+#define BOARD_BITS 56
 #define MAX_PLAYER_MOVES 25
 #define IS_LEGAL 0b01111111011111110111111101111111011111110111111101111111lu
 #define IS_UPPER_BOUND (1lu << 56)
@@ -45,5 +47,7 @@ state* encode(const char* board);
 char* decode(grid curr_pieces, grid opp_pieces);
 
 long evaluate_position(grid, grid, grid, int, long, long,  unordered_map<grid, signed char>&, unordered_map<grid, signed char>&, grid*, unsigned long*);
+
+vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache, grid* end_game_cache, unsigned long*);
 
 #endif //CONNECT4BOT7X7_ENGINE_H

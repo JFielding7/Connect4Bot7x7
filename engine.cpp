@@ -4,6 +4,8 @@
 
 #include <malloc.h>
 #include <iostream>
+#include <vector>
+#include <cmath>
 #include "engine.h"
 
 
@@ -15,10 +17,10 @@ static long min(long arg0, long arg1) {
     return arg0 < arg1 ? arg0 : arg1;
 }
 
-static grid reflect_board(grid board) {
+static grid reflect_state(grid state) {
     grid reflected = 0;
-    for (int start = 0; start < 56; start+=8) {
-        reflected |= ((board >> start) & COLUMN_MASK) << (48 - start);
+    for (int i = 0; i < BOARD_BITS; i+=COL_BITS) {
+        reflected |= ((state >> i) & COLUMN_MASK) << (48 - i);
     }
     return reflected;
 }
@@ -77,6 +79,8 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
         if ((cache_entry & BOARD_MASK) == state) update_alpha_beta_window(&alpha, &beta, cache_entry);
     }
     else {
+        grid reflected = reflect_state(state);
+        if (reflected > state) state = reflected;
         if (lower_bound_cache.count(state)) alpha = max(alpha, (long) lower_bound_cache.at(state));
         if (upper_bound_cache.count(state)) beta = min(beta, (long) upper_bound_cache.at(state));
     }
@@ -135,7 +139,7 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
                 eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -alpha - 1, -alpha, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
                 if (eval > alpha && eval < beta) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -beta, -alpha, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
             }
-            if (moves_made == 0) {
+            if (moves_made == 6) {
                 puts(decode(updated_pieces, opp_pieces));
                 cout << "Eval: " << eval << "\n";
             }
@@ -152,6 +156,39 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
     if (moves_made > BEGINNING_GAME_DEPTH) end_game_cache[index] = state | IS_UPPER_BOUND | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
     else if (!upper_bound_cache.count(state) || alpha < upper_bound_cache.at(state)) upper_bound_cache[state] = (i8) alpha;
     return alpha;
+}
+
+vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache, grid* end_game_cache, unsigned long* pos) {
+    grid curr_pieces = board->curr_pieces, opp_pieces = board->opp_pieces, height_map = board->height_map;
+    int moves_made = board->moves_made + 1;
+
+    long max_eval = WORST_EVAL;
+    vector<state> optimal_moves;
+
+    for (int i = 0; i < MOVE_ORDER_BIT_LENGTH; i += MOVE_BITS) {
+        unsigned long col = (MOVE_ORDER >> i) & MOVE_MASK;
+        cout << col;
+        location move = height_map & (COLUMN_MASK << (col << 3));
+
+        if (move & IS_LEGAL) {
+            grid updated_pieces = curr_pieces | move;
+            grid updated_height_map = height_map + move;
+
+            long eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made, -max_eval, -max_eval + 1, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
+            if (eval == max_eval) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made, WORST_EVAL, -max_eval, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
+
+            auto next_state = state{.curr_pieces = opp_pieces, .opp_pieces = updated_pieces, .height_map = updated_height_map, .moves_made = moves_made};
+
+            if (eval == max_eval) optimal_moves.push_back(next_state);
+            else if (eval > max_eval) {
+                max_eval = eval;
+                optimal_moves.clear();
+                optimal_moves.push_back(next_state);
+            }
+        }
+    }
+    cout << "\nMax Eval: " << max_eval << "\n";
+    return optimal_moves;
 }
 
 state* encode(const char* board) {
