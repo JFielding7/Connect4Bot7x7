@@ -20,7 +20,7 @@ void write_caches_to_database(unordered_map<grid, i8>& lower_bound_cache, unorde
         entries[i++] = entry.first | IS_UPPER_BOUND | (((long) entry.second + MAX_PLAYER_MOVES) << BOUND_SHIFT);
     }
 
-    out.write((char*) entries, (lower_bound_cache.size() + upper_bound_cache.size()) << 3);
+    out.write((char*) entries, (streamsize) (lower_bound_cache.size() + upper_bound_cache.size()) << 3);
     out.close();
 }
 
@@ -57,9 +57,9 @@ int main() {
                         "       \n"
                         "       \n"
                         "       \n"
-                        "   O   \n"
-                        "   XX  \n"
-                        "   XO  \0";
+                        "       \n"
+                        "       \n"
+                        "       \0";
     state* game_state = encode(board);
     cout << "Depth: " << game_state->moves_made << "\n";
 

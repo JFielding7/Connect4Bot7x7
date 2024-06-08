@@ -3,6 +3,7 @@
 //
 
 #include <malloc.h>
+#include <iostream>
 #include "engine.h"
 
 
@@ -134,11 +135,10 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
                 eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -alpha - 1, -alpha, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
                 if (eval > alpha && eval < beta) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -beta, -alpha, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
             }
-//            if (moves_made == 5) {
-//                puts(decode(updated_pieces, opp_pieces));
-//                printf("Eval: %ld", eval);
-//                puts("");
-//            }
+            if (moves_made == 0) {
+                puts(decode(updated_pieces, opp_pieces));
+                cout << "Eval: " << eval << "\n";
+            }
             alpha = max(alpha, eval);
 
             if (alpha >= beta) {
