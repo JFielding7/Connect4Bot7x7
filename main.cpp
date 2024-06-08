@@ -68,7 +68,7 @@ state* reflect_board(state* board) {
 
 int main() {
     const char* board = "       \n"
-                        "   X   \n"
+                        "       \n"
                         "   O   \n"
                         "   X   \n"
                         "   OO  \n"
@@ -77,7 +77,6 @@ int main() {
     state* game_state = encode(board);
 
     cout << decode(game_state->curr_pieces, game_state->opp_pieces) << "\n";
-
     cout << "Depth: " << game_state->moves_made << "\n";
 
     grid height_map = game_state->height_map;
