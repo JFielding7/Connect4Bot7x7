@@ -17,6 +17,8 @@ using namespace std;
 #define WORST_EVAL -BEST_EVAl
 #define DRAW 0
 #define MOVE_ORDER (unsigned long) (3lu + (2 << 4) + (4 << 8) + (5 << 12) + (1 << 16) + (6 << 20))
+#define MOVE_ORDER_BIT_LENGTH 28
+#define MOVE_BITS 4
 #define START_HEIGHTS 0b00000001000000010000000100000001000000010000000100000001lu
 #define ROWS 7
 #define COLS 7
@@ -42,6 +44,6 @@ state* encode(const char* board);
 
 char* decode(grid curr_pieces, grid opp_pieces);
 
-long evaluate_position(grid, grid, grid, int, long, long, unordered_map<grid, char>&, grid*, unsigned long*);
+long evaluate_position(grid, grid, grid, int, long, long,  unordered_map<grid, signed char>&, unordered_map<grid, signed char>&, grid*, unsigned long*);
 
 #endif //CONNECT4BOT7X7_ENGINE_H

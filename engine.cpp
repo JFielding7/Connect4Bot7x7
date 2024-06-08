@@ -57,16 +57,11 @@ static int count_threats(grid pieces, grid height_map) {
 
 // fix for negatives
 static void update_alpha_beta_window(long* alpha, long* beta, grid entry) {
-    if (entry & IS_UPPER_BOUND) {
-        *beta = min(*beta, (long) (entry >> BOUND_SHIFT) - MAX_PLAYER_MOVES);
-    }
-    else {
-//        printf("%ld\n", (long) (entry >> BOUND_SHIFT));
-        *alpha = max(*alpha, (long) (entry >> BOUND_SHIFT) - MAX_PLAYER_MOVES);
-    }
+    if (entry & IS_UPPER_BOUND) *beta = min(*beta, (long) (entry >> BOUND_SHIFT) - MAX_PLAYER_MOVES);
+    else *alpha = max(*alpha, (long) (entry >> BOUND_SHIFT) - MAX_PLAYER_MOVES);
 }
 
-long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int moves_made, long alpha, long beta, unordered_map<grid, char>& beginning_game_cache, grid* end_game_cache, unsigned long* pos) {
+long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int moves_made, long alpha, long beta, unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache, grid* end_game_cache, unsigned long* pos) {
     (*pos)++;
 
     if (moves_made == MAX_TOTAL_MOVES) return DRAW;
@@ -81,11 +76,8 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
         if ((cache_entry & BOARD_MASK) == state) update_alpha_beta_window(&alpha, &beta, cache_entry);
     }
     else {
-        if(beginning_game_cache.count(state)) {
-            char value = beginning_game_cache.at(state);
-            if (value & 1) beta = min(beta, (long) (value >> 1) - MAX_PLAYER_MOVES);
-            else alpha = max(alpha, (long) (value >> 1) - MAX_PLAYER_MOVES);
-        }
+        if (lower_bound_cache.count(state)) alpha = max(alpha, (long) lower_bound_cache.at(state));
+        if (upper_bound_cache.count(state)) beta = min(beta, (long) upper_bound_cache.at(state));
     }
 
     if (alpha >= beta) return alpha;
@@ -93,14 +85,13 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
     int threats = 0;
     int forced_move_count = 0;
     grid forced_move = -1;
-    for (int i = 0; i < 28; i += 4) {
+    for (int i = 0; i < MOVE_ORDER_BIT_LENGTH; i += MOVE_BITS) {
         unsigned long col = (MOVE_ORDER >> i) & MOVE_MASK;
         location move = height_map & (COLUMN_MASK << (col << 3));
+
         if (move & IS_LEGAL) {
             grid updated_pieces = curr_pieces | move;
-            if (is_win(updated_pieces)) {
-                return MAX_PLAYER_MOVES - (moves_made >> 1);
-            }
+            if (is_win(updated_pieces)) return MAX_PLAYER_MOVES - (moves_made >> 1);
 
             // can't short-circuit because a different move may win the game
             if (is_win(opp_pieces | move)) {
@@ -112,10 +103,7 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
             grid next_state = opp_pieces | updated_height_map;
 
             if (moves_made < BEGINNING_GAME_DEPTH) {
-                if(beginning_game_cache.count(next_state)) {
-                    char value = beginning_game_cache.at(next_state);
-                    if (value & 1) beta = min(beta, -((long) (value >> 1) - MAX_PLAYER_MOVES));
-                }
+                if (upper_bound_cache.count(next_state)) alpha = max(alpha, (long) -upper_bound_cache.at(next_state));
             }
             else {
                 grid entry = end_game_cache[next_state % SIZE];
@@ -128,37 +116,41 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
     }
 
     if (forced_move_count > 1) return -(MAX_PLAYER_MOVES - ((moves_made >> 1) + 1));
-    else if (forced_move_count) return -evaluate_position(opp_pieces, curr_pieces | forced_move, height_map + forced_move, moves_made + 1, -beta, -alpha, beginning_game_cache, end_game_cache, pos);
+    else if (forced_move_count) return -evaluate_position(opp_pieces, curr_pieces | forced_move, height_map + forced_move, moves_made + 1, -beta, -alpha, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
 
     int order = sort_by_threats(threats);
     int moves_searched = 0;
-    for (int i = 0; i < 28; i += 4) {
+    for (int i = 0; i < MOVE_ORDER_BIT_LENGTH; i += MOVE_BITS) {
         unsigned long col = (order >> i) & MOVE_MASK;
         location move = height_map & (COLUMN_MASK << (col << 3));
+
         if (move & IS_LEGAL) {
             grid updated_pieces = curr_pieces | move;
             grid updated_height_map = height_map + move;
+
             long eval;
-            if (moves_searched++ == 0) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -beta, -alpha, beginning_game_cache, end_game_cache, pos);
+            if (moves_searched++ == 0) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -beta, -alpha, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
             else {
-                eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -alpha - 1, -alpha, beginning_game_cache, end_game_cache, pos);
-                if (eval > alpha && eval < beta) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -beta, -alpha, beginning_game_cache, end_game_cache, pos);
+                eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -alpha - 1, -alpha, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
+                if (eval > alpha && eval < beta) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -beta, -alpha, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
             }
-            if (moves_made == 5) {
-                puts(decode(updated_pieces, opp_pieces));
-                printf("Eval: %ld", eval);
-                puts("");
-            }
+//            if (moves_made == 5) {
+//                puts(decode(updated_pieces, opp_pieces));
+//                printf("Eval: %ld", eval);
+//                puts("");
+//            }
             alpha = max(alpha, eval);
+
             if (alpha >= beta) {
                 if (moves_made > BEGINNING_GAME_DEPTH) end_game_cache[index] = state | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
-                else beginning_game_cache[state] = (char) ((alpha + MAX_PLAYER_MOVES) << 1);
+                else if (!lower_bound_cache.count(state) || alpha > lower_bound_cache.at(state)) lower_bound_cache[state] = (i8) alpha;
                 return alpha;
             }
         }
     }
+
     if (moves_made > BEGINNING_GAME_DEPTH) end_game_cache[index] = state | IS_UPPER_BOUND | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
-    else beginning_game_cache[state] = (char) (1 | ((alpha + MAX_PLAYER_MOVES) << 1));
+    else if (!upper_bound_cache.count(state) || alpha < upper_bound_cache.at(state)) upper_bound_cache[state] = (i8) alpha;
     return alpha;
 }
 
