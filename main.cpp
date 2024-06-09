@@ -60,10 +60,8 @@ int main() {
                         "       \n"
                         "       \n"
                         "       \n"
-                        "       \0";
+                        " X     \0";
     state* game_state = encode(board);
-
-    cout << decode(game_state->curr_pieces, game_state->opp_pieces) << "\n";
     cout << "Depth: " << game_state->moves_made << "\n";
 
     int moves_made = game_state->moves_made;
@@ -88,12 +86,10 @@ int main() {
 
     unsigned long pos = 0;
     clock_t begin = clock();
-    vector<state> optimal = best_moves(game_state, lower_bound_cache, upper_bound_cache, end_game_cache, &pos);
-    for (auto move : optimal) {
-        cout << decode(move.curr_pieces, move.opp_pieces) << "\n\n";
-    }
-//    long eval = evaluate_position(curr_pieces, opp_pieces, height_map, moves_made, alpha, beta, lower_bound_cache,upper_bound_cache, end_game_cache, &pos);
-//    cout << "Eval: " << eval << "\n";
+//    best_moves(game_state, lower_bound_cache, upper_bound_cache, end_game_cache, &pos);
+//    generate_best_moves(game_state, 2, lower_bound_cache, upper_bound_cache, end_game_cache, &pos);
+    long eval = evaluate_position(curr_pieces, opp_pieces, height_map, moves_made, alpha, beta, lower_bound_cache,upper_bound_cache, end_game_cache, &pos);
+    cout << "Eval: " << eval << "\n";
 //    for (auto position : next_states(game_state)) {
 //        cout << decode(position.curr_pieces, position.opp_pieces) << "\n\n";
 //        long eval = evaluate_position(position.curr_pieces, position.opp_pieces, position.height_map, position.moves_made,

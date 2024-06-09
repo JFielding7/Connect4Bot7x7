@@ -10,7 +10,7 @@
 
 using namespace std;
 
-void generate_best_moves(state* board, int depth);
+void generate_best_moves(state*, int, unordered_map<grid, i8>&, unordered_map<grid, i8>&, grid*, unsigned long*);
 
 vector<state> next_states(state* board);
 

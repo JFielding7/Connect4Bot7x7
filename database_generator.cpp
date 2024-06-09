@@ -1,9 +1,11 @@
 //
 // Created by joe on 6/8/24.
 //
+#include <iostream>
 #include "database_generator.h"
 
 void generate_best_moves(state* board, int depth, unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache, grid* end_game_cache, unsigned long* pos) {
+    cout << decode(board->curr_pieces, board->opp_pieces) << "\nDepth: " << board->moves_made << "\n";
     vector<state> optimal_moves = best_moves(board, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
     if (depth == 1) return;
     for (auto optimal_move : optimal_moves) {

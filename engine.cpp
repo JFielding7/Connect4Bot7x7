@@ -167,7 +167,6 @@ vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cach
 
     for (int i = 0; i < MOVE_ORDER_BIT_LENGTH; i += MOVE_BITS) {
         unsigned long col = (MOVE_ORDER >> i) & MOVE_MASK;
-        cout << col;
         location move = height_map & (COLUMN_MASK << (col << 3));
 
         if (move & IS_LEGAL) {
@@ -187,7 +186,7 @@ vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cach
             }
         }
     }
-    cout << "\nMax Eval: " << max_eval << "\n";
+    cout << "\n" << "Eval: " << max_eval << "\n";
     return optimal_moves;
 }
 
