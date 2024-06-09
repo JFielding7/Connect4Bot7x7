@@ -71,18 +71,18 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
     alpha = max(alpha, -(MAX_PLAYER_MOVES - ((moves_made + 2) >> 1)));
     beta = min(beta, MAX_PLAYER_MOVES - ((moves_made + 1) >> 1));
 
-    grid state = curr_pieces | height_map;
-    size_t index = state % SIZE;
+    grid state_hash_code = curr_pieces | height_map;
+    size_t index = state_hash_code % SIZE;
 
     if (moves_made > BEGINNING_GAME_DEPTH) {
         grid cache_entry = end_game_cache[index];
-        if ((cache_entry & BOARD_MASK) == state) update_alpha_beta_window(&alpha, &beta, cache_entry);
+        if ((cache_entry & BOARD_MASK) == state_hash_code) update_alpha_beta_window(&alpha, &beta, cache_entry);
     }
     else {
-        grid reflected = reflect_state(state);
-        if (reflected > state) state = reflected;
-        if (lower_bound_cache.count(state)) alpha = max(alpha, (long) lower_bound_cache.at(state));
-        if (upper_bound_cache.count(state)) beta = min(beta, (long) upper_bound_cache.at(state));
+        grid reflected = reflect_state(state_hash_code);
+        if (reflected > state_hash_code) state_hash_code = reflected;
+        if (lower_bound_cache.count(state_hash_code)) alpha = max(alpha, (long) lower_bound_cache.at(state_hash_code));
+        if (upper_bound_cache.count(state_hash_code)) beta = min(beta, (long) upper_bound_cache.at(state_hash_code));
     }
 
     if (alpha >= beta) return alpha;
@@ -139,22 +139,22 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
                 eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -alpha - 1, -alpha, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
                 if (eval > alpha && eval < beta) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made + 1, -beta, -alpha, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
             }
-            if (moves_made == 6) {
+            if (moves_made == 0) {
                 puts(decode(updated_pieces, opp_pieces));
                 cout << "Eval: " << eval << "\n";
             }
             alpha = max(alpha, eval);
 
             if (alpha >= beta) {
-                if (moves_made > BEGINNING_GAME_DEPTH) end_game_cache[index] = state | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
-                else if (!lower_bound_cache.count(state) || alpha > lower_bound_cache.at(state)) lower_bound_cache[state] = (i8) alpha;
+                if (moves_made > BEGINNING_GAME_DEPTH) end_game_cache[index] = state_hash_code | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
+                else if (!lower_bound_cache.count(state_hash_code) || alpha > lower_bound_cache.at(state_hash_code)) lower_bound_cache[state_hash_code] = (i8) alpha;
                 return alpha;
             }
         }
     }
 
-    if (moves_made > BEGINNING_GAME_DEPTH) end_game_cache[index] = state | IS_UPPER_BOUND | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
-    else if (!upper_bound_cache.count(state) || alpha < upper_bound_cache.at(state)) upper_bound_cache[state] = (i8) alpha;
+    if (moves_made > BEGINNING_GAME_DEPTH) end_game_cache[index] = state_hash_code | IS_UPPER_BOUND | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
+    else if (!upper_bound_cache.count(state_hash_code) || alpha < upper_bound_cache.at(state_hash_code)) upper_bound_cache[state_hash_code] = (i8) alpha;
     return alpha;
 }
 

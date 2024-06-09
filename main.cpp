@@ -5,6 +5,7 @@
 #include <fstream>
 #include <vector>
 #include "engine.h"
+#include "database_generator.h"
 
 using namespace std;
 
@@ -25,7 +26,7 @@ void write_caches_to_database(unordered_map<grid, i8>& lower_bound_cache, unorde
     out.close();
 }
 
-void read_database_into_caches(unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache) {
+void load_database_into_caches(unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache) {
         ifstream in("caches.bin", ios::binary | ios::ate);
 
         streamsize size = in.tellg();
@@ -46,41 +47,27 @@ void read_database_into_caches(unordered_map<grid, i8>& lower_bound_cache, unord
 
 bool equals(unordered_map<grid, i8>& map0, unordered_map<grid, i8>& map1) {
     if (map0.size() != map1.size()) return false;
-    cout << "same size ";
     for (auto pair : map0) {
         if (!map1.count(pair.first) || map1.at(pair.first) != pair.second) return false;
     }
     return true;
 }
 
-state* reflect_board(state* board) {
-    auto reflected = (state*) malloc(sizeof(state));
-    reflected->curr_pieces = reflected->opp_pieces = reflected->height_map = 0;
-    reflected->moves_made = board->moves_made;
-
-    for (int i = 0; i < BOARD_BITS; i+=COL_BITS) {
-        reflected->curr_pieces |= ((board->curr_pieces >> i) & COLUMN_MASK) << (48 - i);
-        reflected->opp_pieces |= ((board->opp_pieces >> i) & COLUMN_MASK) << (48 - i);
-        reflected->height_map |= ((board->height_map >> i) & COLUMN_MASK) << (48 - i);
-    }
-    return reflected;
-}
-
 int main() {
     const char* board = "       \n"
                         "       \n"
-                        "   O   \n"
-                        "   X   \n"
-                        "   OO  \n"
-                        "   XX  \n"
-                        "   XO  \0";
+                        "       \n"
+                        "       \n"
+                        "       \n"
+                        "       \n"
+                        "       \0";
     state* game_state = encode(board);
 
     cout << decode(game_state->curr_pieces, game_state->opp_pieces) << "\n";
     cout << "Depth: " << game_state->moves_made << "\n";
 
-    grid height_map = game_state->height_map;
     int moves_made = game_state->moves_made;
+    grid height_map = game_state->height_map;
     grid curr_pieces = game_state->curr_pieces;
     grid opp_pieces = game_state->opp_pieces;
     if (moves_made & 1) {
@@ -91,35 +78,39 @@ int main() {
 
     long alpha = WORST_EVAL;
     long beta = BEST_EVAL;
-    grid* end_game_cache = (grid *) malloc(SIZE * sizeof(grid));
-    for (int i = 0; i < SIZE; i++) {
-        end_game_cache[i] = 0;
-    }
+
     unordered_map<grid, i8> lower_bound_cache;
     unordered_map<grid, i8> upper_bound_cache;
-//    read_database_into_caches(lower_bound_cache, upper_bound_cache);
+    load_database_into_caches(lower_bound_cache, upper_bound_cache);
+
+    grid* end_game_cache = (grid *) malloc(SIZE * sizeof(grid));
+    for (int i = 0; i < SIZE; i++) end_game_cache[i] = 0;
 
     unsigned long pos = 0;
     clock_t begin = clock();
-//    long eval = evaluate_position(curr_pieces, opp_pieces, height_map, moves_made, alpha, beta, lower_bound_cache, upper_bound_cache, end_game_cache, &pos);
-    vector<state> optimal_moves = best_moves(game_state, lower_bound_cache, upper_bound_cache, end_game_cache, &pos);
-    clock_t end = clock();
-
-    for (auto move : optimal_moves) {
-        cout << "\n";
+    vector<state> optimal = best_moves(game_state, lower_bound_cache, upper_bound_cache, end_game_cache, &pos);
+    for (auto move : optimal) {
         cout << decode(move.curr_pieces, move.opp_pieces) << "\n\n";
     }
-
+//    long eval = evaluate_position(curr_pieces, opp_pieces, height_map, moves_made, alpha, beta, lower_bound_cache,upper_bound_cache, end_game_cache, &pos);
 //    cout << "Eval: " << eval << "\n";
+//    for (auto position : next_states(game_state)) {
+//        cout << decode(position.curr_pieces, position.opp_pieces) << "\n\n";
+//        long eval = evaluate_position(position.curr_pieces, position.opp_pieces, position.height_map, position.moves_made,
+//                                      alpha, beta, lower_bound_cache,upper_bound_cache, end_game_cache, &pos);
+//        cout << "Eval: " << eval << "\n";
+//    }
+    clock_t end = clock();
+
     cout << "Pos: " << pos << "\n";
     cout << "Time: " << (double) (end - begin) / CLOCKS_PER_SEC << "\n";
-    cout << "Lower cache size: " << lower_bound_cache.size() << "\n";
-    cout << "Upper cache size: " << upper_bound_cache.size() << "\n";
+    cout << "Lower bound cache size: " << lower_bound_cache.size() << "\n";
+    cout << "Upper bound cache size: " << upper_bound_cache.size() << "\n";
 
 //    write_caches_to_database(lower_bound_cache, upper_bound_cache);
 //    unordered_map<grid, i8> l;
 //    unordered_map<grid, i8> u;
-//    read_database_into_caches(l, u);
+//    load_database_into_caches(l, u);
 //
 //    cout << equals(lower_bound_cache, l) << "\n";
 //    cout << equals(upper_bound_cache, u) << "\n";
