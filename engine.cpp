@@ -25,6 +25,13 @@ static grid reflect_state(grid state) {
     return reflected;
 }
 
+grid hash_code(state* board) {
+    grid code = board->curr_pieces | board->height_map;
+    grid reflected = reflect_state(code);
+    if (reflected > code) return reflected;
+    return code;
+}
+
 static int sort_by_threats(int threats) {
     int order = MOVE_ORDER;
     for (int i = 4; i < 28; i += 4) {
@@ -186,7 +193,7 @@ vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cach
             }
         }
     }
-    cout << "\n" << "Eval: " << max_eval << "\n";
+//    cout << "Eval: " << max_eval << "\n";
     return optimal_moves;
 }
 

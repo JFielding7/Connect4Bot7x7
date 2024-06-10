@@ -2,17 +2,32 @@
 // Created by joe on 6/8/24.
 //
 #include <iostream>
+#include <unordered_set>
+#include <mutex>
 #include "database_generator.h"
+#include "engine.h"
 
-void generate_best_moves(state* board, int depth, unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache, grid* end_game_cache, unsigned long* pos) {
-    cout << decode(board->curr_pieces, board->opp_pieces) << "\nDepth: " << board->moves_made << "\n";
+void generate_optimal_states(state* board, int depth, vector<state>& optimal_states, unordered_set<grid>& seen, unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache, grid* end_game_cache, unsigned long* pos) {
+    grid code = hash_code(board);
+    if (seen.count(code)) return;
+    seen.insert(code);
+
+    if (depth == 1) {
+        optimal_states.push_back(*board);
+        return;
+    }
+
     vector<state> optimal_moves = best_moves(board, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
-    if (depth == 1) return;
     for (auto optimal_move : optimal_moves) {
         for (auto move : next_states(&optimal_move)) {
-            generate_best_moves(&move, depth - 1, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
+            generate_optimal_states(&move, depth - 1, optimal_states, seen, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
         }
     }
+}
+
+void get_optimal_states(state* board, int depth, vector<state>& optimal_states, unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache, grid* end_game_cache, unsigned long* pos) {
+    unordered_set<grid> seen;
+    generate_optimal_states(board, depth, optimal_states, seen, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
 }
 
 vector<state> next_states(state* board) {
@@ -30,4 +45,29 @@ vector<state> next_states(state* board) {
         }
     }
     return next_states;
+}
+
+mutex exclusion;
+
+state* get_next_position(vector<state, allocator<state>>& positions, size_t* i) {
+    exclusion.lock();
+    state* position = nullptr;
+    if (*i != positions.size()) {
+        position = &positions.at(*i);
+        (*i)++;
+    }
+    exclusion.unlock();
+    return position;
+}
+
+void generate_best_moves(vector<state>& positions, size_t* i, unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache, unsigned long* pos) {
+    grid* end_game_cache = (grid *) malloc(SIZE * sizeof(grid));
+    for (int j = 0; j < SIZE; j++) end_game_cache[j] = 0;
+
+    state* position = get_next_position(positions, i);
+    while (position != nullptr) {
+        cout << "I: " + to_string(*i) + "\n";
+        best_moves(position, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
+        position = get_next_position(positions, i);
+    }
 }

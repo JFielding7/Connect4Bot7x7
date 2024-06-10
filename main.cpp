@@ -4,8 +4,11 @@
 #include <unordered_map>
 #include <fstream>
 #include <vector>
+#include <thread>
 #include "engine.h"
 #include "database_generator.h"
+
+#define THREADS 16
 
 using namespace std;
 
@@ -53,6 +56,17 @@ bool equals(unordered_map<grid, i8>& map0, unordered_map<grid, i8>& map1) {
     return true;
 }
 
+void sum(unsigned long* pos) {
+    while(1) {
+        long total_pos = 0;
+        for (int i = 0; i < THREADS; i++) total_pos += (long) pos[i];
+        if (1) {
+            cout << (total_pos) << "\n";
+        }
+        this_thread::sleep_for(std::chrono::seconds(1));
+    }
+}
+
 int main() {
     const char* board = "       \n"
                         "       \n"
@@ -60,7 +74,7 @@ int main() {
                         "       \n"
                         "       \n"
                         "       \n"
-                        " X     \0";
+                        "       \0";
     state* game_state = encode(board);
     cout << "Depth: " << game_state->moves_made << "\n";
 
@@ -84,32 +98,46 @@ int main() {
     grid* end_game_cache = (grid *) malloc(SIZE * sizeof(grid));
     for (int i = 0; i < SIZE; i++) end_game_cache[i] = 0;
 
-    unsigned long pos = 0;
+    auto* pos = (unsigned long*) malloc(THREADS * sizeof(unsigned long*));
+    for (int i = 0; i < THREADS; i++) pos[i] = 0;
+
+    vector<state> optimal_states;
+    get_optimal_states(game_state, 2, optimal_states, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
+    unsigned long tpos = 0;
+    for (int i = 0; i < THREADS; i++) tpos += pos[i];
+    cout << "Total: " << tpos << "\n";
+    size_t i_val = 0;
+    size_t* idx = &i_val;
+
     clock_t begin = clock();
-//    best_moves(game_state, lower_bound_cache, upper_bound_cache, end_game_cache, &pos);
-//    generate_best_moves(game_state, 2, lower_bound_cache, upper_bound_cache, end_game_cache, &pos);
-    long eval = evaluate_position(curr_pieces, opp_pieces, height_map, moves_made, alpha, beta, lower_bound_cache,upper_bound_cache, end_game_cache, &pos);
-    cout << "Eval: " << eval << "\n";
-//    for (auto position : next_states(game_state)) {
-//        cout << decode(position.curr_pieces, position.opp_pieces) << "\n\n";
-//        long eval = evaluate_position(position.curr_pieces, position.opp_pieces, position.height_map, position.moves_made,
-//                                      alpha, beta, lower_bound_cache,upper_bound_cache, end_game_cache, &pos);
-//        cout << "Eval: " << eval << "\n";
-//    }
+
+    vector<thread> threads;
+    threads.reserve(THREADS);
+    for (int i = 1; i < THREADS; i++) {
+        threads.emplace_back(generate_best_moves, ref(optimal_states), idx, ref(lower_bound_cache), ref(upper_bound_cache), pos + i);
+    }
+
+//    thread t0(sum, pos);
+    generate_best_moves(optimal_states, idx, lower_bound_cache, upper_bound_cache, pos);
+
+    for (auto & thread : threads) thread.join();
+
     clock_t end = clock();
 
-    cout << "Pos: " << pos << "\n";
+    unsigned long total_pos = 0;
+    for (int i = 0; i < THREADS; i++) total_pos += pos[i];
+
+    cout << "Pos: " << total_pos << " " << "\n";
     cout << "Time: " << (double) (end - begin) / CLOCKS_PER_SEC << "\n";
     cout << "Lower bound cache size: " << lower_bound_cache.size() << "\n";
     cout << "Upper bound cache size: " << upper_bound_cache.size() << "\n";
 
-//    write_caches_to_database(lower_bound_cache, upper_bound_cache);
-//    unordered_map<grid, i8> l;
-//    unordered_map<grid, i8> u;
-//    load_database_into_caches(l, u);
-//
-//    cout << equals(lower_bound_cache, l) << "\n";
-//    cout << equals(upper_bound_cache, u) << "\n";
+    write_caches_to_database(lower_bound_cache, upper_bound_cache);
+    unordered_map<grid, i8> l;
+    unordered_map<grid, i8> u;
+    load_database_into_caches(l, u);
+    cout << equals(lower_bound_cache, l) << "\n";
+    cout << equals(upper_bound_cache, u) << "\n";
 
     return 0;
 }

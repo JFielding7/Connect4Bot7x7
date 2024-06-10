@@ -50,4 +50,6 @@ long evaluate_position(grid, grid, grid, int, long, long,  unordered_map<grid, s
 
 vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache, grid* end_game_cache, unsigned long*);
 
+grid hash_code(state*);
+
 #endif //CONNECT4BOT7X7_ENGINE_H
