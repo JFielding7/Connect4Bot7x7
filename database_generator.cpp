@@ -49,13 +49,10 @@ vector<state> next_states(state* board) {
 
 mutex exclusion;
 
-state* get_next_position(vector<state, allocator<state>>& positions, size_t* i) {
+state* get_next_position(vector<state>& positions, size_t* i) {
     exclusion.lock();
     state* position = nullptr;
-    if (*i != positions.size()) {
-        position = &positions.at(*i);
-        (*i)++;
-    }
+    if (*i != positions.size()) position = &positions.at((*i)++);
     exclusion.unlock();
     return position;
 }

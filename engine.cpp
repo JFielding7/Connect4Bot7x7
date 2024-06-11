@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <mutex>
 #include "engine.h"
 
 
@@ -69,6 +70,26 @@ static int count_threats(grid pieces, grid height_map) {
 static void update_alpha_beta_window(long* alpha, long* beta, grid entry) {
     if (entry & IS_UPPER_BOUND) *beta = min(*beta, (long) (entry >> BOUND_SHIFT) - MAX_PLAYER_MOVES);
     else *alpha = max(*alpha, (long) (entry >> BOUND_SHIFT) - MAX_PLAYER_MOVES);
+}
+
+mutex lower_bound_mutex;
+
+void update_lower_bound(unordered_map<grid, i8>& lower_bound_cache, grid state_hash_code, long bound) {
+    lower_bound_mutex.lock();
+    if (!lower_bound_cache.count(state_hash_code) || bound > lower_bound_cache.at(state_hash_code)) {
+        lower_bound_cache[state_hash_code] = (i8) bound;
+    }
+    lower_bound_mutex.unlock();
+}
+
+mutex upper_bound_mutex;
+
+void update_upper_bound(unordered_map<grid, i8>& upper_bound_cache, grid state_hash_code, long bound) {
+    upper_bound_mutex.lock();
+    if (!upper_bound_cache.count(state_hash_code) || state_hash_code < upper_bound_cache.at(state_hash_code)) {
+        upper_bound_cache[state_hash_code] = (i8) bound;
+    }
+    upper_bound_mutex.unlock();
 }
 
 long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int moves_made, long alpha, long beta, unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache, grid* end_game_cache, unsigned long* pos) {
@@ -154,22 +175,32 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
 
             if (alpha >= beta) {
                 if (moves_made > BEGINNING_GAME_DEPTH) end_game_cache[index] = state_hash_code | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
-                else if (!lower_bound_cache.count(state_hash_code) || alpha > lower_bound_cache.at(state_hash_code)) lower_bound_cache[state_hash_code] = (i8) alpha;
+                else update_lower_bound(lower_bound_cache, state_hash_code, alpha);
                 return alpha;
             }
         }
     }
 
     if (moves_made > BEGINNING_GAME_DEPTH) end_game_cache[index] = state_hash_code | IS_UPPER_BOUND | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
-    else if (!upper_bound_cache.count(state_hash_code) || alpha < upper_bound_cache.at(state_hash_code)) upper_bound_cache[state_hash_code] = (i8) alpha;
+    else update_upper_bound(upper_bound_cache, state_hash_code, alpha);
     return alpha;
+}
+
+int depth(state* board) {
+    grid pieces = board->curr_pieces | board->opp_pieces;
+    int piece_count = 0;
+    while (pieces) {
+        piece_count++;
+        pieces = pieces & (pieces - 1);
+    }
+    return piece_count;
 }
 
 vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache, grid* end_game_cache, unsigned long* pos) {
     grid curr_pieces = board->curr_pieces, opp_pieces = board->opp_pieces, height_map = board->height_map;
     int moves_made = board->moves_made + 1;
 
-    long max_eval = WORST_EVAL;
+    long max_eval = depth(board) == 4 ? 15 : WORST_EVAL;
     vector<state> optimal_moves;
 
     for (int i = 0; i < MOVE_ORDER_BIT_LENGTH; i += MOVE_BITS) {
@@ -193,7 +224,7 @@ vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cach
             }
         }
     }
-//    cout << "Eval: " << max_eval << "\n";
+    cout << "Eval: " << max_eval << "\n";
     return optimal_moves;
 }
 

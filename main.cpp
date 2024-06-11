@@ -8,7 +8,7 @@
 #include "engine.h"
 #include "database_generator.h"
 
-#define THREADS 16
+#define THREADS 28
 
 using namespace std;
 
@@ -67,7 +67,22 @@ void sum(unsigned long* pos) {
     }
 }
 
+#include "sys/types.h"
+#include "sys/sysinfo.h"
+
 int main() {
+//    unordered_map<long, long> b;
+//    for (long i = 0; i < 12500000; i++) {
+//        b[i] = i;
+//    }
+//    struct sysinfo memInfo;
+//    sysinfo (&memInfo);
+//    long long virtualMemUsed = memInfo.totalram - memInfo.freeram;
+//    virtualMemUsed += memInfo.totalswap - memInfo.freeswap;
+//    virtualMemUsed *= memInfo.mem_unit;
+//    cout << virtualMemUsed << "\n";
+//    cout << b.size();
+//    return 0;
     const char* board = "       \n"
                         "       \n"
                         "       \n"
@@ -102,14 +117,15 @@ int main() {
     for (int i = 0; i < THREADS; i++) pos[i] = 0;
 
     vector<state> optimal_states;
-    get_optimal_states(game_state, 2, optimal_states, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
-    unsigned long tpos = 0;
-    for (int i = 0; i < THREADS; i++) tpos += pos[i];
-    cout << "Total: " << tpos << "\n";
+    get_optimal_states(game_state, 3, optimal_states, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
+    cout << "Positions to Solve: " << optimal_states.size() << "\n";
+
+    unsigned long t_pos = 0;
+    for (int i = 0; i < THREADS; i++) t_pos += pos[i];
     size_t i_val = 0;
     size_t* idx = &i_val;
 
-    clock_t begin = clock();
+//    clock_t begin = clock();
 
     vector<thread> threads;
     threads.reserve(THREADS);
@@ -117,27 +133,26 @@ int main() {
         threads.emplace_back(generate_best_moves, ref(optimal_states), idx, ref(lower_bound_cache), ref(upper_bound_cache), pos + i);
     }
 
-//    thread t0(sum, pos);
     generate_best_moves(optimal_states, idx, lower_bound_cache, upper_bound_cache, pos);
 
     for (auto & thread : threads) thread.join();
 
-    clock_t end = clock();
+//    clock_t end = clock();
 
     unsigned long total_pos = 0;
     for (int i = 0; i < THREADS; i++) total_pos += pos[i];
 
     cout << "Pos: " << total_pos << " " << "\n";
-    cout << "Time: " << (double) (end - begin) / CLOCKS_PER_SEC << "\n";
+//    cout << "Time: " << (double) (end - begin) / CLOCKS_PER_SEC << "\n";
     cout << "Lower bound cache size: " << lower_bound_cache.size() << "\n";
     cout << "Upper bound cache size: " << upper_bound_cache.size() << "\n";
 
-    write_caches_to_database(lower_bound_cache, upper_bound_cache);
-    unordered_map<grid, i8> l;
-    unordered_map<grid, i8> u;
-    load_database_into_caches(l, u);
-    cout << equals(lower_bound_cache, l) << "\n";
-    cout << equals(upper_bound_cache, u) << "\n";
+//    write_caches_to_database(lower_bound_cache, upper_bound_cache);
+//    unordered_map<grid, i8> l;
+//    unordered_map<grid, i8> u;
+//    load_database_into_caches(l, u);
+//    cout << equals(lower_bound_cache, l) << "\n";
+//    cout << equals(upper_bound_cache, u) << "\n";
 
     return 0;
 }
