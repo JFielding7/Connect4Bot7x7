@@ -200,7 +200,7 @@ vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cach
     grid curr_pieces = board->curr_pieces, opp_pieces = board->opp_pieces, height_map = board->height_map;
     int moves_made = board->moves_made + 1;
 
-    long max_eval = depth(board) == 4 ? 15 : WORST_EVAL;
+    long max_eval = WORST_EVAL;
     vector<state> optimal_moves;
 
     for (int i = 0; i < MOVE_ORDER_BIT_LENGTH; i += MOVE_BITS) {

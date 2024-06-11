@@ -147,12 +147,12 @@ int main() {
     cout << "Lower bound cache size: " << lower_bound_cache.size() << "\n";
     cout << "Upper bound cache size: " << upper_bound_cache.size() << "\n";
 
-//    write_caches_to_database(lower_bound_cache, upper_bound_cache);
-//    unordered_map<grid, i8> l;
-//    unordered_map<grid, i8> u;
-//    load_database_into_caches(l, u);
-//    cout << equals(lower_bound_cache, l) << "\n";
-//    cout << equals(upper_bound_cache, u) << "\n";
+    write_caches_to_database(lower_bound_cache, upper_bound_cache);
+    unordered_map<grid, i8> l;
+    unordered_map<grid, i8> u;
+    load_database_into_caches(l, u);
+    cout << equals(lower_bound_cache, l) << "\n";
+    cout << equals(upper_bound_cache, u) << "\n";
 
     return 0;
 }
