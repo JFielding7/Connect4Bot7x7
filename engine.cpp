@@ -172,7 +172,7 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
                 cout << "Eval: " << eval << "\n";
             }
             alpha = max(alpha, eval);
-
+static bool is_win(grid board)
             if (alpha >= beta) {
                 if (moves_made > BEGINNING_GAME_DEPTH) end_game_cache[index] = state_hash_code | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
                 else update_lower_bound(lower_bound_cache, state_hash_code, alpha);
@@ -203,6 +203,8 @@ vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cach
     long max_eval = WORST_EVAL;
     vector<state> optimal_moves;
 
+    if (is_win(curr_pieces) || is_win(opp_pieces)) return optimal_moves;
+
     for (int i = 0; i < MOVE_ORDER_BIT_LENGTH; i += MOVE_BITS) {
         unsigned long col = (MOVE_ORDER >> i) & MOVE_MASK;
         location move = height_map & (COLUMN_MASK << (col << 3));
@@ -211,10 +213,14 @@ vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cach
             grid updated_pieces = curr_pieces | move;
             grid updated_height_map = height_map + move;
 
+            auto next_state = state{.curr_pieces = opp_pieces, .opp_pieces = updated_pieces, .height_map = updated_height_map, .moves_made = moves_made};
+	    if (is_win(updated_pieces)) {
+		optimal_moves.clear();
+		optimal_moves.push_back(next_state);
+		return optimal_moves;
+	    }
             long eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made, -max_eval, -max_eval + 1, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
             if (eval == max_eval) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made, WORST_EVAL, -max_eval, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
-
-            auto next_state = state{.curr_pieces = opp_pieces, .opp_pieces = updated_pieces, .height_map = updated_height_map, .moves_made = moves_made};
 
             if (eval == max_eval) optimal_moves.push_back(next_state);
             else if (eval > max_eval) {
@@ -225,6 +231,7 @@ vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cach
         }
     }
     cout << "Eval: " << max_eval << "\n";
+    cout << "\n" << decode(board->curr_pieces, board-> opp_pieces) << "\n";
     return optimal_moves;
 }
 
