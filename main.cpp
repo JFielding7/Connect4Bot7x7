@@ -8,7 +8,7 @@
 #include "engine.h"
 #include "database_generator.h"
 
-#define THREADS 28
+#define THREADS 50
 
 using namespace std;
 
@@ -117,7 +117,7 @@ int main() {
     for (int i = 0; i < THREADS; i++) pos[i] = 0;
 
     vector<state> optimal_states;
-    get_optimal_states(game_state, 3, optimal_states, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
+    get_optimal_states(game_state, 5, optimal_states, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
     cout << "Positions to Solve: " << optimal_states.size() << "\n";
 
     unsigned long t_pos = 0;
@@ -132,6 +132,8 @@ int main() {
     for (int i = 1; i < THREADS; i++) {
         threads.emplace_back(generate_best_moves, ref(optimal_states), idx, ref(lower_bound_cache), ref(upper_bound_cache), pos + i);
     }
+
+//    thread t0(sum, pos);
 
     generate_best_moves(optimal_states, idx, lower_bound_cache, upper_bound_cache, pos);
 

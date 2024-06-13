@@ -172,7 +172,6 @@ long evaluate_position(grid curr_pieces, grid opp_pieces, grid height_map, int m
                 cout << "Eval: " << eval << "\n";
             }
             alpha = max(alpha, eval);
-static bool is_win(grid board)
             if (alpha >= beta) {
                 if (moves_made > BEGINNING_GAME_DEPTH) end_game_cache[index] = state_hash_code | ((alpha + MAX_PLAYER_MOVES) << BOUND_SHIFT);
                 else update_lower_bound(lower_bound_cache, state_hash_code, alpha);
