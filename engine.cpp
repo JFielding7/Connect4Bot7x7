@@ -219,8 +219,11 @@ vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cach
 		return optimal_moves;
 	    }
             long eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made, -max_eval, -max_eval + 1, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
-            if (eval == max_eval) eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made, WORST_EVAL, -max_eval, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
-
+            if (eval == max_eval) {
+		    eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made, WORST_EVAL, -max_eval, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
+	    	    update_lower_bound(lower_bound_cache, opp_pieces | updated_height_map, -eval);
+		    update_upper_bound(upper_bound_cache, opp_pieces | updated_height_map, -eval);
+	    }
             if (eval == max_eval) optimal_moves.push_back(next_state);
             else if (eval > max_eval) {
                 max_eval = eval;
