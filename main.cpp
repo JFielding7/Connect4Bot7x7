@@ -89,7 +89,7 @@ int main() {
                         "       \n"
                         "       \n"
                         "       \n"
-                        "       \0";
+                        "X      \0";
     state* game_state = encode(board);
     cout << "Depth: " << game_state->moves_made << "\n";
 
@@ -117,7 +117,7 @@ int main() {
     for (int i = 0; i < THREADS; i++) pos[i] = 0;
 
     vector<state> optimal_states;
-    get_optimal_states(game_state, 5, optimal_states, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
+    get_optimal_states(game_state, 7, optimal_states, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
     cout << "Positions to Solve: " << optimal_states.size() << "\n";
 
     unsigned long t_pos = 0;
@@ -125,31 +125,26 @@ int main() {
     size_t i_val = 0;
     size_t* idx = &i_val;
 
-//    clock_t begin = clock();
-
     vector<thread> threads;
     threads.reserve(THREADS);
     for (int i = 1; i < THREADS; i++) {
         threads.emplace_back(generate_best_moves, ref(optimal_states), idx, ref(lower_bound_cache), ref(upper_bound_cache), pos + i);
     }
 
-//    thread t0(sum, pos);
-
     generate_best_moves(optimal_states, idx, lower_bound_cache, upper_bound_cache, pos);
 
     for (auto & thread : threads) thread.join();
-
-//    clock_t end = clock();
 
     unsigned long total_pos = 0;
     for (int i = 0; i < THREADS; i++) total_pos += pos[i];
 
     cout << "Pos: " << total_pos << " " << "\n";
-//    cout << "Time: " << (double) (end - begin) / CLOCKS_PER_SEC << "\n";
     cout << "Lower bound cache size: " << lower_bound_cache.size() << "\n";
     cout << "Upper bound cache size: " << upper_bound_cache.size() << "\n";
 
     write_caches_to_database(lower_bound_cache, upper_bound_cache);
+
+    return 0;
     unordered_map<grid, i8> l;
     unordered_map<grid, i8> u;
     load_database_into_caches(l, u);

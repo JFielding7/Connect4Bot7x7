@@ -36,10 +36,9 @@ vector<state> next_states(state* board) {
 
     vector<state> next_states;
     unsigned long ORDER = (6lu << 4) + (1lu << 8) + (5lu << 12) + (2lu << 16) + (4lu << 20) + (3lu << 24);
-    cout << ORDER << "\n";
+
     for (int i = 0; i < MOVE_ORDER_BIT_LENGTH; i += MOVE_BITS) {
         unsigned long col = (MOVE_ORDER >> i) & MOVE_MASK;
-	cout << col << " ";
         location move = height_map & (COLUMN_MASK << (col << 3));
 
         if (move & IS_LEGAL) {
@@ -65,7 +64,7 @@ void generate_best_moves(vector<state>& positions, size_t* i, unordered_map<grid
 
     state* position = get_next_position(positions, i);
     while (position != nullptr) {
-        cout << "Count: " + to_string(*i) + "\n";
+        // cout << "Count: " + to_string(*i) + "\n";
         best_moves(position, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
         position = get_next_position(positions, i);
     }

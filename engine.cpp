@@ -86,7 +86,7 @@ mutex upper_bound_mutex;
 
 void update_upper_bound(unordered_map<grid, i8>& upper_bound_cache, grid state_hash_code, long bound) {
     upper_bound_mutex.lock();
-    if (!upper_bound_cache.count(state_hash_code) || state_hash_code < upper_bound_cache.at(state_hash_code)) {
+    if (!upper_bound_cache.count(state_hash_code) || bound < upper_bound_cache.at(state_hash_code)) {
         upper_bound_cache[state_hash_code] = (i8) bound;
     }
     upper_bound_mutex.unlock();
@@ -196,7 +196,9 @@ int depth(state* board) {
 }
 
 vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cache, unordered_map<grid, i8>& upper_bound_cache, grid* end_game_cache, unsigned long* pos) {
+    unsigned long start = *pos;
     grid curr_pieces = board->curr_pieces, opp_pieces = board->opp_pieces, height_map = board->height_map;
+//    cout << "\n" << decode(curr_pieces, opp_pieces) << "\n";
     int moves_made = board->moves_made + 1;
 
     long max_eval = WORST_EVAL;
@@ -220,10 +222,14 @@ vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cach
 	    }
             long eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made, -max_eval, -max_eval + 1, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
             if (eval == max_eval) {
-		    eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made, WORST_EVAL, -max_eval, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
-	    	    update_lower_bound(lower_bound_cache, opp_pieces | updated_height_map, -eval);
-		    update_upper_bound(upper_bound_cache, opp_pieces | updated_height_map, -eval);
+		eval = -evaluate_position(opp_pieces, updated_pieces, updated_height_map, moves_made, WORST_EVAL, -max_eval, lower_bound_cache, upper_bound_cache, end_game_cache, pos);
+		grid next_hash_code = opp_pieces | updated_height_map;
+		grid reflected = reflect_state(next_hash_code);
+                if (reflected > next_hash_code) next_hash_code = reflected;
+	    	update_lower_bound(lower_bound_cache, next_hash_code, -eval);
+		update_upper_bound(upper_bound_cache, next_hash_code, -eval);
 	    }
+
             if (eval == max_eval) optimal_moves.push_back(next_state);
             else if (eval > max_eval) {
                 max_eval = eval;
@@ -232,8 +238,6 @@ vector<state> best_moves(state* board, unordered_map<grid, i8>& lower_bound_cach
             }
         }
     }
-    cout << "Eval: " << max_eval << "\n";
-    cout << "\n" << decode(board->curr_pieces, board-> opp_pieces) << "\n";
     return optimal_moves;
 }
 
